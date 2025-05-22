@@ -1,112 +1,144 @@
-#setwd("C:\\Users\\c2111415\\Documents\\introducao a analise de dados\\Dados")
-#install.packages("dplyr")
+setwd("D:\\Introdução a analise de dados\\Dados")
 
+library(descr)
 library(dplyr)
+library(ggplot2)
+
+celular <- NULL
+
+file.head("celular.csv")
+
+celular <- read.csv2("celular.csv", sep = ';', dec = '.')
 
 #a)
 
-arq_celular <- NULL
 grafico_barra <- NULL
 
-arq_celular <- read.csv2("celular.csv", sep = ";", dec = ".")
+grafico_barra <- table(celular$modelo)
 
-grafico_barra <- table(arq_celular["modelo"])
-
-barplot(grafico_barra, main = "Total de dias de aluguel para cada modelo ", xlab = "Modelo celular", ylab = "Total de dias de aluguel")
+#barplot(grafico_barra, main = "Total de dias de aluguel para os diferentes tipos de modelo", 
+      xlab = "Modelo de celular", ylab = "Total de dias de aluguel")
 
 #b)
 
 grafico_pizza <- NULL
 
-grafico_pizza <- table(arq_celular["modelo"])
+grafico_pizza <- table(celular$modelo)
 
-pie(grafico_pizza, main = "Total de dias de aluguel para cada modelo")
+#pie(grafico_pizza, main = "Total de dias de aluguel para os diferentes tipos de modelo")
 
 #c)
 
-celular_lucro <- NULL
+soma_lucro <- 0.0
 
-celular_lucro <- mutate(arq_celular, lucro = (aluguel - (imposto + seguro)))
+celular <- mutate(celular, Lucro = (aluguel - (imposto + seguro)))
+celular$mes <- "marco"
+
+soma_lucro <- sum(celular$Lucro, na.rm = TRUE)
+print(paste("Lucro total da empresa", soma_lucro))
 
 #d)
 
-celular_dia_modelo <- NULL
-dia <- NULL
-aparelhos_alugados <- NULL
-
-celular_dia_modelo <- count(arq_celular, dia)
-
-dia <- celular_dia_modelo[["dia"]]
-aparelhos_alugados <- celular_dia_modelo[["n"]]
-
-aparelhos_alugados <- aparelhos_alugados + rnorm(length(dia))
-
-plot(dia, aparelhos_alugados, main = "Total de aparelhos alugados para cada dia do mês", xlab = "Dia do mês", ylab = "Total de aparelhos alugados")
+#ggplot(celular) +
+geom_point(aes(x = dia, y = modelo, fill = as.factor(modelo))) +
+labs(x = "Dia do mes", y = "Total de aparelhos alugados") +
+ggtitle("Total de aparelhos alugados para cada dia do mes")
 
 #e)
+
+#ggplot(celular) + 
+geom_point(aes(x = dia, y = Lucro)) +
+labs(x = "Dia do mes", y = "Lucro obtido") +
+ggtitle("Lucro obtido com o aluguel dos aparelhos para cada dia do mes")
+
+#f)
+
+qtd_alugueis_acima_media_lucro <- 0
+
+
+qtd_alugueis_acima_media_lucro <- filter(celular, Lucro > mean(Lucro, na.rm = TRUE))
+print(paste("Quantidade de alugueis onde o lucro ficou acima da media", sum(nrow(qtd_alugueis_acima_media_lucro))))
+
+#g)
+
+for (linha in 1:nrow(celular))
+{
+if (is.na(celular[linha, 4])){
+  celular[linha, 4] <- 2
+}
+}
+
+celular <- mutate(celular, Lucro = (aluguel - (imposto + seguro)))
 
 #h)
 
 aluguel_abril <- NULL
 aluguel_maio <- NULL
+maio_e_abril <- NULL
+aluguel_total <- NULL
 
-celular[["mes"]] <- "marco"
+file.head("celularabril.csv")
 
 aluguel_abril <- read.csv("celularabril.csv", sep = ',', dec = '.', header = FALSE)
+aluguel_abril$mes <- "abril"
 
-names(aluguel_abril) <- c("dia", "modelo", "imposto", "seguro", "aluguel")
+names(aluguel_abril) <- c("dia", "modelo", "imposto", "seguro", "aluguel", "mes")
 
-aluguel_abril[["mes"]] <- "abril"
+file.head("celularmaio.txt")
 
 aluguel_maio <- read.fwf("celularmaio.txt", widths = c(2, 1, 2, 2, 3), col.names = c("dia", "modelo", "imposto", "seguro", "aluguel"))
+aluguel_maio$imposto <- aluguel_maio$imposto / 10
+aluguel_maio$aluguel <- aluguel_maio$aluguel / 10
+aluguel_maio$mes <- "maio"
 
-aluguel_maio[["mes"]] <- "maio"
 
+maio_e_abril <- merge(aluguel_abril, aluguel_maio, all = TRUE)
+aluguel_total <- merge(celular, maio_e_abril, all = TRUE)
 
-aluguel_maio[["imposto"]] <- aluguel_maio[["imposto"]] / 10
-aluguel_maio[["aluguel"]] <- aluguel_maio[["aluguel"]] / 10 
+for (linha in 1:nrow(aluguel_total))
+{
+if (is.na(aluguel_total[linha, 4])){
+  aluguel_total[linha, 4] <- 2
+}
+}
 
-celular_atualizado <- merge(celular, aluguel_abril, all = TRUE)
-celular_atualizado <- merge(celular_atualizado, aluguel_maio, all = TRUE)
+aluguel_total <- mutate(aluguel_total, Lucro = (aluguel - (imposto + seguro)))
 
 #i)
 
-write.csv2(celular_atualizado, "aluguel.csv", row.names = FALSE)
+write.csv2(aluguel_total, "aluguel.csv", row.names = FALSE)
 
 #j)
 
-aluguel_celular <- read.csv2("aluguel.csv", sep = ";", header = TRUE)
+aluguel_novo <- NULL
 
-#k) ?
+aluguel_novo <- read.csv2("aluguel.csv", sep = ';', dec = ',')
 
-alugados_em_abril_apenas <- count(aluguel_celular, modelo, mes = "abril")
-alugados_em_marco_apenas <- count(aluguel_celular, modelo, mes = "marco")
+#k) 
+
+alugadosMarco <- aluguel_novo %>% filter(mes == "marco") %>% distinct(modelo)
+alugadosAbril <- aluguel_novo %>% filter(mes == "abril") %>% distinct(modelo)
+
+modelos <- anti_join(alugadosAbril, alugadosMarco)
+print(modelos)
 
 #l)
 
-aluguel_celular <- aluguel_celular %>%
-  mutate(
-    imposto = as.numeric(imposto),
-    seguro  = as.numeric(seguro),
-    aluguel = as.numeric(aluguel)  # só se necessário
-  )
+alugadosMaio <- NULL
+qtd_alugueis_acima_media_lucro_maio <- 0
+
+alugadosMaio <- filter(aluguel_novo, mes == "maio") 
+qtd_alugueis_acima_media_lucro_maio <- filter(alugadosMaio, Lucro > mean(aluguel_novo$Lucro))
+print(nrow(qtd_alugueis_acima_media_lucro_maio))
+
+#m)
 
 
-aluguel_celular <- mutate(aluguel_celular, lucro = aluguel - 
-                            (ifelse(is.na(imposto), 0, imposto) + 
-                               ifelse(is.na(seguro), 0, seguro)))
+aluguel_novo_lucro_mes <- select(aluguel_novo, mes, Lucro)
+aluguel_novo_lucro_mes <- group_by(aluguel_novo_lucro_mes, mes)
+aluguel_novo_lucro_mes <- summarise(aluguel_novo_lucro_mes, Lucro = sum(Lucro))
 
-media_dos_alugueis <- mean(aluguel_celular[["lucro"]])
-
-aluguel_em_maio <- distinct(aluguel_celular, mes = "maio", lucro)
-qtd_acima_da_media <- 0
-
-for (lucro in aluguel_em_maio[["lucro"]])
-{
-  if (lucro > media_dos_alugueis){
-    qtd_acima_da_media <- qtd_acima_da_media + 1
-  }
-}
-  
-qtd_acima_da_media
-
+ggplot(aluguel_novo_lucro_mes) +
+  geom_bar(aes(x = mes, y = Lucro), stat = "identity") +
+  labs(x = "Mes", y = "Lucro obtido") +
+  ggtitle("Lucro obtido com os alugueis para os tres meses de aluguel")
