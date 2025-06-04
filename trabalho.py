@@ -1,36 +1,31 @@
 
-from dash import Dash, html, dcc, callback, Output, Input
+from dash import Dash, html, dash_table, dcc
 import pandas as pd
-#import os
+import sqlite3
+import os
 import plotly.express as px
 
-#os.chdir("C:\\Users\\c2111415\\Documents\\introducao a analise de dados\\Trabalho")
-regiao = pd.read_csv("estado.csv")
-estado = pd.read_csv("regiao.csv")
+os.chdir("C:\\Users\\c2111415\\Documents\\introducao a analise de dados\\Trabalho")
 
-#df =  pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminder_unfiltered.csv')
+banco_de_dados = sqlite3.connect("G2.db")
+cidade = pd.read_sql_query("select * from Cidade;", banco_de_dados)
+data = pd.read_sql_query("select * from Data", banco_de_dados)
+estado = pd.read_sql_query("select * from Estado", banco_de_dados)
+regiao = pd.read_sql_query("select * from Regiao", banco_de_dados)
+data = pd.read_sql_query("select * from Data", banco_de_dados)
+registro = pd.read_sql_query("select * from Registro", banco_de_dados)
 
-print(regiao)
+banco_de_dados.close()
 
-""""
 app = Dash(__name__)
 
 app.layout = [
-    html.H1(children='Title of Dash App', style={'textAlign':'center'}),
-    dcc.Dropdown(df.country.unique(), 'Canada', id='dropdown-selection'),
-    dcc.Graph(id='graph-content')
+  html.Div(children = "Usando a tabela cidade"), 
+  dash_table.DataTable(data = cidade.to_dict('records'), page_size=10),
+  dcc.Graph(figure=px.histogram(cidade, x='uf', y='populacao', histfunc='sum')),
+  dcc.Graph(figure=px.histogram(cidade, x='nomelocalidade', y='populacao', histfunc='sum'))
 ]
 
-@callback(
-    Output('graph-content', 'figure'),
-    Input('dropdown-selection', 'value')
-)
-def update_graph(value):
-    dff = df[df.country==value]
-    return px.line(dff, x='year', y='pop')
-
-# IMPORTANTE: sem o reloader!
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
-"""
+  app.run(debug=True)
 
