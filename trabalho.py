@@ -1,13 +1,60 @@
-
 from dash import Dash, html, dash_table, dcc, callback, Output, Input
 import pandas as pd
 import sqlite3
-import os
+
 import plotly.express as px
 
-#os.chdir("C:\\Users\\c2111415\\Documents\\introducao a analise de dados\\Trabalho")
+def criaCaixa(titulo, vetor_total, cor):
+
+    return html.Div([
+        html.Div(titulo, style={
+            'fontWeight': 'bold',
+            'marginBottom': '10px'
+        }),
+
+        html.Ul([
+         
+            html.Li([
+                " • Brasil", 
+                html.Div(vetor_total[0], style = {'color': cor})
+            ]), 
+
+            html.Li([
+                " • Estado de Minas Gerais", 
+                html.Div(vetor_total[1], style = {'color': cor})
+            ]), 
+
+            html.Li([
+                " • Cidade de Belo Horizonte", 
+                html.Div(vetor_total[2], style = {'color': cor})
+            ]), 
+
+        ], style = {
+            'listStyleType': 'none',
+            'paddingLeft': '0',
+            'fontSize': '12px'
+        }),   
+    ], 
+
+    style={
+        'border': '2px solid #007bff',
+        'borderRadius': '15px',
+        'padding': '10px',
+        'width': '175px',
+        'height': '175px',
+        'fontFamily': 'Arial',
+        'fontSize': '14px',
+        'overflow': 'hidden',
+        'display': 'flex',
+        'flexDirection': 'column',
+        'justifyContent': 'center',
+        'alignItems': 'flex-start',
+        'boxSizing': 'border-box',
+        'marginRight': '20px'
+    })  
 
 banco_de_dados = sqlite3.connect("G2.db")
+
 cidade = pd.read_sql_query("select * from Cidade;", banco_de_dados)
 data = pd.read_sql_query("select * from Data", banco_de_dados)
 estado = pd.read_sql_query("select * from Estado", banco_de_dados)
@@ -17,7 +64,13 @@ registro = pd.read_sql_query("select * from Registro", banco_de_dados)
 minas_gerais = pd.read_sql_query("select * from MinasGerais", banco_de_dados)
 
 #pegar o total de casos do Brasil
-total_casos_Brasil = sum(registro['casosnovos'])
+total_casos_Brasil = 0
+for linha in registro.itertuples():
+
+        if linha.tipo == 'state':
+            total_casos_Brasil += linha.casosnovos
+
+
 
 #pegar o total de casos do Estado e cidade de Minas Gerais
 total_casos_estado = 0
@@ -25,21 +78,21 @@ total_casos_Belo_Horizonte = 0
 for linha in minas_gerais.itertuples():
     
     if linha.nomelocalidade == 'Belo Horizonte':
-        total_casos_Belo_Horizonte += int(linha.casosnovos)
+        total_casos_Belo_Horizonte += linha.casosnovos
     
-    else: 
-        total_casos_estado += int(linha.casosnovos)
+    total_casos_estado += linha.casosnovos
 
-#print(f"Total de casos confirmados no Brasil: {total_casos_Brasil}")
-#print(f"Total de casos confirmados nos estados de Minas Gerais: {total_casos_estado}")
-#print(f"Total de casos confirmados na cidade de Belo Horizonte: {total_casos_Belo_Horizonte}")
 
 #Total de obitos
 
 #a) Brasil
 
-total_obitos_Brasil = sum(registro['mortesnovas'])
+total_obitos_Brasil = 0
+for linha in registro.itertuples():
 
+    if linha.tipo == 'state':
+        total_obitos_Brasil += linha.mortesnovas
+    
 #b) Estado de Minas Gerais e Cidade de Belo Horizonte
 
 total_obitos_estado = 0
@@ -47,23 +100,20 @@ total_obitos_Belo_Horizonte = 0
 for linha in minas_gerais.itertuples():
     
     if linha.nomelocalidade == 'Belo Horizonte':
-        total_obitos_Belo_Horizonte += int(linha.mortesnovas)
+        total_obitos_Belo_Horizonte += linha.mortesnovas
     
-    else: 
-        total_obitos_estado += int(linha.mortesnovas)
+    total_obitos_estado += linha.mortesnovas
 
-#print(f"Total de obitos confirmados no Brasil: {total_obitos_Brasil}")
-#print(f"Total de obitos confirmados nos estados de Minas Gerais: {total_obitos_estado}")
-#print(f"Total de obitos confirmados na cidade de Belo Horizonte: {total_obitos_Belo_Horizonte}")
+
 
 #Letalidade 
 
 letalidade_Brasil = total_obitos_Brasil / total_casos_Brasil
-#print(letalidade_Brasil)
+
 letalidade_Estado_Minas_Gerais = total_obitos_estado / total_casos_estado
-#print(letalidade_Estado_Minas_Gerais)
+
 letalidade_Belo_Horizonte = total_obitos_Belo_Horizonte / total_casos_Belo_Horizonte
-#print(letalidade_Belo_Horizonte)
+
 
 #Mortalidade 
 
@@ -76,39 +126,40 @@ for linha in cidade.itertuples():
 
 mortalidade_Brasil = total_obitos_Brasil / total_habitantes_Brasil
 
-total_habitantes_Estado_Minas_Gerais = cidade[(cidade['uf'] == 'MG') and (cidade['nomelocalidade'] == None)]
-print(total_habitantes_Estado_Minas_Gerais) 
-# filtrar total_habitantes_Cidade_Belo_Horizonte = 0
+total_habitantes_Estado_Minas_Gerais = minas_gerais[(minas_gerais['tipo'] == 'state')]
+total_habitantes_Estado_Minas_Gerais = total_habitantes_Estado_Minas_Gerais['populacao'].values[0]
 
-for linha in minas_gerais.itertuples():
-    
-    if linha.tipo == 2:
-        total_habitantes_Brasil += int(linha.populacao)
+mortalidade_Estado_Minas_Gerais = total_obitos_estado / total_habitantes_Estado_Minas_Gerais
+
+total_habitantes_Cidade_BeloHorizonte = minas_gerais[((minas_gerais['nomelocalidade'] == 'Belo Horizonte'))]
+total_habitantes_Cidade_BeloHorizonte = total_habitantes_Cidade_BeloHorizonte['populacao'].values[0]
+
+mortalidade_Cidade_BeloHorizonte = total_obitos_Belo_Horizonte / total_habitantes_Cidade_BeloHorizonte
+
+vetor_total_casos_novos = [total_casos_Brasil, total_casos_estado, total_casos_Belo_Horizonte]
+vetor_total_obitos = [total_obitos_Brasil, total_obitos_estado, total_obitos_Belo_Horizonte]
+vetor_letalidade = [letalidade_Brasil, letalidade_Estado_Minas_Gerais, letalidade_Belo_Horizonte]
+vetor_mortalidade = [mortalidade_Brasil, mortalidade_Estado_Minas_Gerais, mortalidade_Cidade_BeloHorizonte]
 
 banco_de_dados.close()
 
 app = Dash(__name__)
 
-app.layout = [
-  html.Div([
-     html.H2("Escolha o dashboard"), 
-     dcc.Dropdown(
-        id = 'dashboard-selector', 
-        options=[
-           {'label': 'Cidade', 'value': 'cidade'}, 
-           {'label': 'Registro', 'value': 'registro'}
-        ],
-        value = 'cidade'
-     ), 
-     dcc.Graph(id = 'grafico_principal')
-  ]),
-  #html.Hr(),
-  #dcc.RadioItems(options = ['nomelocalidade', 'uf'], value = 'nomelocalidade', id = 'controls-and-radio-item'), 
-  #dash_table.DataTable(data = cidade.to_dict('records'), page_size=6),
-  
-  #dcc.Graph(figure={}, id='controls-and-graph')
-]
+app.layout = html.Div([
 
+    html.Div([
+        criaCaixa("Total de casos confirmados", vetor_total_casos_novos, 'blue'),
+        criaCaixa("Total de óbitos", vetor_total_obitos, 'gold'), 
+        criaCaixa("Letalidade", vetor_letalidade, 'purple'), 
+        criaCaixa("Mortalidade", vetor_mortalidade, 'red')
+    ], style={
+        'display': 'flex',
+        'flexDirection': 'row'
+    })
+
+])
+  
+'''
 @callback(
     Output(component_id='grafico_principal', component_property='figure'),
     Input(component_id='dashboard-selector', component_property='value')
@@ -125,7 +176,10 @@ def update_graph(dashboard_selecionado):
 
     #fig = px.histogram(cidade, x=row_chosen, y='populacao', histfunc='avg')
     return fig
+'''
 
 if __name__ == '__main__':
   app.run(debug=True)
 
+#Aumentar o tamanho das caixas
+#Arrendondar os valores de letalidade e mortalidade
